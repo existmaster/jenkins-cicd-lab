@@ -75,6 +75,12 @@ export DOCKER_API_VERSION=1.43
 docker exec -u root jenkins chmod 666 /var/run/docker.sock
 ```
 
+### Stage View가 보이지 않을 때
+
+Pipeline: Stage View 플러그인이 설치되지 않은 것입니다.
+**Manage Jenkins > Plugins > Available plugins**에서 `Pipeline: Stage View`를 검색하여 설치합니다.
+설치 후 Jenkins를 재시작하면 Job Status 페이지에 파이프라인 시각화가 표시됩니다.
+
 ### Pipeline "checkout scm" 실패
 
 Repository URL이 본인 Fork의 HTTPS URL인지 확인합니다:
