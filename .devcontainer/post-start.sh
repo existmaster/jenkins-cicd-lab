@@ -14,8 +14,10 @@ for i in $(seq 1 60); do
   if [ -n "$PASSWORD" ]; then
     break
   fi
+  printf "."
   sleep 3
 done
+echo ""
 
 echo "================================================"
 if [ -n "$PASSWORD" ]; then
