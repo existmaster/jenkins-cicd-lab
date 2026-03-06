@@ -5,6 +5,9 @@ echo ""
 echo "⏳ Jenkins 시작 대기중... (최대 3분)"
 echo ""
 
+# Jenkins 컨테이너에서 Docker 소켓 사용 가능하도록 권한 설정
+docker exec -u root jenkins chmod 666 /var/run/docker.sock 2>/dev/null
+
 PASSWORD=""
 for i in $(seq 1 60); do
   PASSWORD=$(docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null)
