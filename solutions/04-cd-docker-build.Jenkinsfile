@@ -1,8 +1,21 @@
+// LO7 완성: 통합 Jenkinsfile (CI + Docker Build)
+// Backend CI, Frontend CI, Docker Build를 하나의 Jenkinsfile로 통합합니다
+
 pipeline {
     agent any
 
     tools {
         nodejs 'node20'
+    }
+
+    environment {
+        CI = 'true'
+        NODE_ENV = 'test'
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -12,93 +25,72 @@ pipeline {
             }
         }
 
-        // Backend CI
-        stage('Backend - Install') {
-            steps {
-                dir('apps/backend') {
-                    sh 'npm install'
+        stage('Backend CI') {
+            stages {
+                stage('Backend Install') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm install'
+                        }
+                    }
+                }
+                stage('Backend Lint') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm run lint'
+                        }
+                    }
+                }
+                stage('Backend Test') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm test'
+                        }
+                    }
                 }
             }
         }
 
-        stage('Backend - Lint') {
-            steps {
-                dir('apps/backend') {
-                    sh 'npm run lint'
+        stage('Frontend CI') {
+            stages {
+                stage('Frontend Install') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm install'
+                        }
+                    }
+                }
+                stage('Frontend Lint') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm run lint'
+                        }
+                    }
+                }
+                stage('Frontend Build') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm run build'
+                        }
+                    }
+                }
+                stage('Frontend Test') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm test'
+                        }
+                    }
                 }
             }
         }
 
-        stage('Backend - Test') {
+        stage('Docker Build') {
             steps {
-                dir('apps/backend') {
-                    sh 'npm test'
-                }
+                sh '''
+                    docker build -t backend:${BUILD_NUMBER} apps/backend/
+                    docker build -t frontend:${BUILD_NUMBER} apps/frontend/
+                '''
             }
-        }
-
-        // Frontend CI
-        stage('Frontend - Install') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Frontend - Lint') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm run lint'
-                }
-            }
-        }
-
-        stage('Frontend - Build') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Frontend - Test') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm test'
-                }
-            }
-        }
-
-        // Docker Build
-        stage('Docker Build - Backend') {
-            steps {
-                dir('apps/backend') {
-                    sh "docker build -t todo-backend:${BUILD_NUMBER} ."
-                    sh "docker tag todo-backend:${BUILD_NUMBER} todo-backend:latest"
-                }
-            }
-        }
-
-        stage('Docker Build - Frontend') {
-            steps {
-                dir('apps/frontend') {
-                    sh "docker build -t todo-frontend:${BUILD_NUMBER} ."
-                    sh "docker tag todo-frontend:${BUILD_NUMBER} todo-frontend:latest"
-                }
-            }
-        }
-    }
-
-    post {
-        always {
-            junit allowEmptyResults: true, testResults: '**/test-results.xml'
-        }
-        failure {
-            echo 'CI/CD 파이프라인 실패!'
-        }
-        success {
-            echo "Docker 이미지 빌드 완료 (Build #${BUILD_NUMBER})"
         }
     }
 }

@@ -1,6 +1,6 @@
 services:
   backend-prod:
-    image: todo-backend:${BUILD_NUMBER:-latest}
+    image: backend:${BUILD_NUMBER:-latest}
     container_name: backend-prod
     ports:
       - "4000:3000"
@@ -10,7 +10,7 @@ services:
       - devcontainer
 
   frontend-prod:
-    image: todo-frontend:${BUILD_NUMBER:-latest}
+    image: frontend:${BUILD_NUMBER:-latest}
     container_name: frontend-prod
     ports:
       - "4001:80"

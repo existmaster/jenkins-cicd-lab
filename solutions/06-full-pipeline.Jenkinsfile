@@ -1,3 +1,6 @@
+// LO9 완성: 전체 파이프라인 (triggers + Telegram 알림)
+// pollSCM으로 자동 빌드, Telegram으로 결과 알림
+
 pipeline {
     agent any
 
@@ -10,8 +13,15 @@ pipeline {
     }
 
     environment {
+        CI = 'true'
+        NODE_ENV = 'test'
         TELEGRAM_BOT_TOKEN = credentials('telegram-bot-token')
         TELEGRAM_CHAT_ID = credentials('telegram-chat-id')
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -26,21 +36,21 @@ pipeline {
             parallel {
                 stage('Backend CI') {
                     stages {
-                        stage('Backend - Install') {
+                        stage('Backend Install') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm install'
                                 }
                             }
                         }
-                        stage('Backend - Lint') {
+                        stage('Backend Lint') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm run lint'
                                 }
                             }
                         }
-                        stage('Backend - Test') {
+                        stage('Backend Test') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm test'
@@ -52,28 +62,28 @@ pipeline {
 
                 stage('Frontend CI') {
                     stages {
-                        stage('Frontend - Install') {
+                        stage('Frontend Install') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm install'
                                 }
                             }
                         }
-                        stage('Frontend - Lint') {
+                        stage('Frontend Lint') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm run lint'
                                 }
                             }
                         }
-                        stage('Frontend - Build') {
+                        stage('Frontend Build') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm run build'
                                 }
                             }
                         }
-                        stage('Frontend - Test') {
+                        stage('Frontend Test') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm test'
@@ -85,39 +95,22 @@ pipeline {
             }
         }
 
-        // Quality Gate
-        stage('Coverage Check') {
-            steps {
-                script {
-                    def coverageFile = readFile('apps/backend/coverage/coverage-summary.json')
-                    def coverage = readJSON text: coverageFile
-                    def lineCoverage = coverage.total.lines.pct
-
-                    echo "Backend Line Coverage: ${lineCoverage}%"
-
-                    if (lineCoverage < 60) {
-                        error "Coverage ${lineCoverage}% is below the 60% threshold"
-                    }
-                }
-            }
-        }
-
         // Docker Build
         stage('Docker Build') {
             parallel {
                 stage('Build Backend Image') {
                     steps {
                         dir('apps/backend') {
-                            sh "docker build -t todo-backend:${BUILD_NUMBER} ."
-                            sh "docker tag todo-backend:${BUILD_NUMBER} todo-backend:latest"
+                            sh "docker build -t backend:${BUILD_NUMBER} ."
+                            sh "docker tag backend:${BUILD_NUMBER} backend:latest"
                         }
                     }
                 }
                 stage('Build Frontend Image') {
                     steps {
                         dir('apps/frontend') {
-                            sh "docker build -t todo-frontend:${BUILD_NUMBER} ."
-                            sh "docker tag todo-frontend:${BUILD_NUMBER} todo-frontend:latest"
+                            sh "docker build -t frontend:${BUILD_NUMBER} ."
+                            sh "docker tag frontend:${BUILD_NUMBER} frontend:latest"
                         }
                     }
                 }
@@ -125,10 +118,13 @@ pipeline {
         }
 
         // Deploy to Staging
-        stage('Deploy to Staging') {
+        stage('Deploy Staging') {
             steps {
-                sh "docker compose -f docker-compose.staging.yml down || true"
-                sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.staging.yml up -d"
+                sh '''
+                    export BUILD_NUMBER=${BUILD_NUMBER}
+                    docker compose -f docker-compose.staging.yml down || true
+                    docker compose -f docker-compose.staging.yml up -d
+                '''
                 sh '''
                     sleep 5
                     curl -f http://backend-staging:3000/health || exit 1
@@ -150,10 +146,13 @@ pipeline {
         }
 
         // Deploy to Production
-        stage('Deploy to Production') {
+        stage('Deploy Production') {
             steps {
-                sh "docker compose -f docker-compose.prod.yml down || true"
-                sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.prod.yml up -d"
+                sh '''
+                    export BUILD_NUMBER=${BUILD_NUMBER}
+                    docker compose -f docker-compose.prod.yml down || true
+                    docker compose -f docker-compose.prod.yml up -d
+                '''
                 sh '''
                     sleep 5
                     curl -f http://backend-prod:4000/health || exit 1
@@ -164,10 +163,6 @@ pipeline {
     }
 
     post {
-        always {
-            junit allowEmptyResults: true, testResults: '**/test-results.xml'
-            archiveArtifacts artifacts: '**/coverage/**', allowEmptyArchive: true
-        }
         success {
             sh '''
                 curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \

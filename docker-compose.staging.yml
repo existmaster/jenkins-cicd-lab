@@ -1,6 +1,6 @@
 services:
   backend-staging:
-    image: todo-backend:${BUILD_NUMBER:-latest}
+    image: backend:${BUILD_NUMBER:-latest}
     container_name: backend-staging
     ports:
       - "3000:3000"
@@ -10,7 +10,7 @@ services:
       - devcontainer
 
   frontend-staging:
-    image: todo-frontend:${BUILD_NUMBER:-latest}
+    image: frontend:${BUILD_NUMBER:-latest}
     container_name: frontend-staging
     ports:
       - "3001:80"

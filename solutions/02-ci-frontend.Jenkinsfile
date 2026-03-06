@@ -1,3 +1,6 @@
+// LO5 완성: Frontend CI 파이프라인
+// Jenkinsfile.frontend 파일로 저장합니다 (Script Path: Jenkinsfile.frontend)
+
 pipeline {
     agent any
 

@@ -1,3 +1,16 @@
+// LO6: 품질 게이트
+// Jenkinsfile 자체는 01과 동일합니다.
+// 이 챕터의 핵심은 vitest.config.js에 커버리지 임계값을 설정하는 것입니다.
+//
+// vitest.config.js에 추가할 내용:
+//   test: {
+//     coverage: {
+//       provider: 'v8',
+//       reporter: ['text', 'json-summary'],
+//       thresholds: { lines: 60, branches: 60, functions: 60, statements: 60 }
+//     }
+//   }
+
 pipeline {
     agent any
 
@@ -12,8 +25,7 @@ pipeline {
             }
         }
 
-        // Backend CI
-        stage('Backend - Install') {
+        stage('Install') {
             steps {
                 dir('apps/backend') {
                     sh 'npm install'
@@ -21,7 +33,7 @@ pipeline {
             }
         }
 
-        stage('Backend - Lint') {
+        stage('Lint') {
             steps {
                 dir('apps/backend') {
                     sh 'npm run lint'
@@ -29,75 +41,19 @@ pipeline {
             }
         }
 
-        stage('Backend - Test') {
+        stage('Test') {
             steps {
                 dir('apps/backend') {
                     sh 'npm test'
                 }
             }
-        }
-
-        // Frontend CI
-        stage('Frontend - Install') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm install'
-                }
-            }
-        }
-
-        stage('Frontend - Lint') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm run lint'
-                }
-            }
-        }
-
-        stage('Frontend - Build') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Frontend - Test') {
-            steps {
-                dir('apps/frontend') {
-                    sh 'npm test'
-                }
-            }
-        }
-
-        // Quality Gate
-        stage('Coverage Check') {
-            steps {
-                script {
-                    def coverageFile = readFile('apps/backend/coverage/coverage-summary.json')
-                    def coverage = readJSON text: coverageFile
-                    def lineCoverage = coverage.total.lines.pct
-
-                    echo "Backend Line Coverage: ${lineCoverage}%"
-
-                    if (lineCoverage < 60) {
-                        error "Coverage ${lineCoverage}% is below the 60% threshold"
+            post {
+                always {
+                    dir('apps/backend') {
+                        junit 'test-results.xml'
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            junit allowEmptyResults: true, testResults: '**/test-results.xml'
-            archiveArtifacts artifacts: '**/coverage/**', allowEmptyArchive: true
-        }
-        failure {
-            echo 'CI Quality Gate 실패!'
-        }
-        success {
-            echo 'CI Quality Gate 통과!'
         }
     }
 }

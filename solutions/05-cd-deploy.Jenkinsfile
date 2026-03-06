@@ -1,8 +1,21 @@
+// LO8 완성: 통합 배포 (parallel CI + Docker + Staging/Production)
+// CI를 parallel로 전환하고, Docker Build 후 Staging/Production에 배포합니다
+
 pipeline {
     agent any
 
     tools {
         nodejs 'node20'
+    }
+
+    environment {
+        CI = 'true'
+        NODE_ENV = 'test'
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -17,21 +30,21 @@ pipeline {
             parallel {
                 stage('Backend CI') {
                     stages {
-                        stage('Backend - Install') {
+                        stage('Backend Install') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm install'
                                 }
                             }
                         }
-                        stage('Backend - Lint') {
+                        stage('Backend Lint') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm run lint'
                                 }
                             }
                         }
-                        stage('Backend - Test') {
+                        stage('Backend Test') {
                             steps {
                                 dir('apps/backend') {
                                     sh 'npm test'
@@ -43,28 +56,28 @@ pipeline {
 
                 stage('Frontend CI') {
                     stages {
-                        stage('Frontend - Install') {
+                        stage('Frontend Install') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm install'
                                 }
                             }
                         }
-                        stage('Frontend - Lint') {
+                        stage('Frontend Lint') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm run lint'
                                 }
                             }
                         }
-                        stage('Frontend - Build') {
+                        stage('Frontend Build') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm run build'
                                 }
                             }
                         }
-                        stage('Frontend - Test') {
+                        stage('Frontend Test') {
                             steps {
                                 dir('apps/frontend') {
                                     sh 'npm test'
@@ -82,16 +95,16 @@ pipeline {
                 stage('Build Backend Image') {
                     steps {
                         dir('apps/backend') {
-                            sh "docker build -t todo-backend:${BUILD_NUMBER} ."
-                            sh "docker tag todo-backend:${BUILD_NUMBER} todo-backend:latest"
+                            sh "docker build -t backend:${BUILD_NUMBER} ."
+                            sh "docker tag backend:${BUILD_NUMBER} backend:latest"
                         }
                     }
                 }
                 stage('Build Frontend Image') {
                     steps {
                         dir('apps/frontend') {
-                            sh "docker build -t todo-frontend:${BUILD_NUMBER} ."
-                            sh "docker tag todo-frontend:${BUILD_NUMBER} todo-frontend:latest"
+                            sh "docker build -t frontend:${BUILD_NUMBER} ."
+                            sh "docker tag frontend:${BUILD_NUMBER} frontend:latest"
                         }
                     }
                 }
@@ -99,10 +112,13 @@ pipeline {
         }
 
         // Deploy to Staging
-        stage('Deploy to Staging') {
+        stage('Deploy Staging') {
             steps {
-                sh "docker compose -f docker-compose.staging.yml down || true"
-                sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.staging.yml up -d"
+                sh '''
+                    export BUILD_NUMBER=${BUILD_NUMBER}
+                    docker compose -f docker-compose.staging.yml down || true
+                    docker compose -f docker-compose.staging.yml up -d
+                '''
                 sh '''
                     sleep 5
                     curl -f http://backend-staging:3000/health || exit 1
@@ -124,28 +140,19 @@ pipeline {
         }
 
         // Deploy to Production
-        stage('Deploy to Production') {
+        stage('Deploy Production') {
             steps {
-                sh "docker compose -f docker-compose.prod.yml down || true"
-                sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.prod.yml up -d"
+                sh '''
+                    export BUILD_NUMBER=${BUILD_NUMBER}
+                    docker compose -f docker-compose.prod.yml down || true
+                    docker compose -f docker-compose.prod.yml up -d
+                '''
                 sh '''
                     sleep 5
                     curl -f http://backend-prod:4000/health || exit 1
                     echo "Production 배포 성공"
                 '''
             }
-        }
-    }
-
-    post {
-        always {
-            junit allowEmptyResults: true, testResults: '**/test-results.xml'
-        }
-        failure {
-            echo 'CI/CD 파이프라인 실패!'
-        }
-        success {
-            echo "전체 파이프라인 성공 (Build #${BUILD_NUMBER})"
         }
     }
 }

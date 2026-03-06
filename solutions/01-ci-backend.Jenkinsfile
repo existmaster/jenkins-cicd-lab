@@ -1,3 +1,6 @@
+// LO4 완성: Backend CI 파이프라인
+// Jenkinsfile을 이 내용으로 교체합니다
+
 pipeline {
     agent any
 
@@ -41,15 +44,6 @@ pipeline {
                     }
                 }
             }
-        }
-    }
-
-    post {
-        failure {
-            echo 'Backend CI 실패!'
-        }
-        success {
-            echo 'Backend CI 성공!'
         }
     }
 }
