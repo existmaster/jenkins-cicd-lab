@@ -3,6 +3,10 @@
   "dockerComposeFile": "docker-compose.yml",
   "service": "workspace",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "20" }
+  },
   "forwardPorts": [8080, 3000, 3001, 4000, 4001],
   "portsAttributes": {
     "8080": { "label": "Jenkins", "onAutoForward": "openBrowser" },
