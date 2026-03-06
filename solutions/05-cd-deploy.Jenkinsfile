@@ -121,7 +121,7 @@ pipeline {
                 '''
                 sh '''
                     sleep 5
-                    curl -f http://backend-staging:3000/health || exit 1
+                    curl -f http://backend-staging:3000/api/health || exit 1
                     echo "Staging 배포 성공"
                 '''
             }
@@ -149,7 +149,7 @@ pipeline {
                 '''
                 sh '''
                     sleep 5
-                    curl -f http://backend-prod:4000/health || exit 1
+                    curl -f http://backend-prod:4000/api/health || exit 1
                     echo "Production 배포 성공"
                 '''
             }
