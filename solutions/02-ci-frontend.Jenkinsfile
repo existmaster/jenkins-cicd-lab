@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node20'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -11,7 +15,7 @@ pipeline {
         stage('Install') {
             steps {
                 dir('apps/frontend') {
-                    sh 'npm ci'
+                    sh 'npm install'
                 }
             }
         }

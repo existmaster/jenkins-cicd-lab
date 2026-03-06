@@ -1,22 +1,25 @@
 services:
-  backend:
+  backend-prod:
     image: todo-backend:${BUILD_NUMBER:-latest}
+    container_name: backend-prod
     ports:
       - "4000:3000"
     environment:
       - NODE_ENV=production
     networks:
-      - production
+      - devcontainer
 
-  frontend:
+  frontend-prod:
     image: todo-frontend:${BUILD_NUMBER:-latest}
+    container_name: frontend-prod
     ports:
       - "4001:80"
     depends_on:
-      - backend
+      - backend-prod
     networks:
-      - production
+      - devcontainer
 
 networks:
-  production:
-    driver: bridge
+  devcontainer:
+    name: jenkins-cicd-lab_devcontainer_default
+    external: true

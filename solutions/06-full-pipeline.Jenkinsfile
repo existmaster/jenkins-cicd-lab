@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node20'
+    }
+
     triggers {
         pollSCM('H/2 * * * *')
     }
@@ -25,7 +29,7 @@ pipeline {
                         stage('Backend - Install') {
                             steps {
                                 dir('apps/backend') {
-                                    sh 'npm ci'
+                                    sh 'npm install'
                                 }
                             }
                         }
@@ -51,7 +55,7 @@ pipeline {
                         stage('Frontend - Install') {
                             steps {
                                 dir('apps/frontend') {
-                                    sh 'npm ci'
+                                    sh 'npm install'
                                 }
                             }
                         }
@@ -125,15 +129,22 @@ pipeline {
             steps {
                 sh "docker compose -f docker-compose.staging.yml down || true"
                 sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.staging.yml up -d"
-                echo "Staging 배포 완료"
+                sh '''
+                    sleep 5
+                    curl -f http://backend-staging:3000/health || exit 1
+                    echo "Staging 배포 성공"
+                '''
             }
         }
 
         // Manual Approval
-        stage('Production 배포 승인') {
+        stage('Approval') {
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
             steps {
-                input message: 'Staging 검증 완료 후 Production에 배포하시겠습니까?',
-                      ok: '배포',
+                input message: 'Staging 확인 완료. Production에 배포하시겠습니까?',
+                      ok: '배포 승인',
                       submitter: 'admin'
             }
         }
@@ -143,7 +154,11 @@ pipeline {
             steps {
                 sh "docker compose -f docker-compose.prod.yml down || true"
                 sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.prod.yml up -d"
-                echo "Production 배포 완료"
+                sh '''
+                    sleep 5
+                    curl -f http://backend-prod:4000/health || exit 1
+                    echo "Production 배포 성공"
+                '''
             }
         }
     }
@@ -161,8 +176,8 @@ pipeline {
                   --data-urlencode "text=<b>Jenkins CI/CD</b>
 <b>Build:</b> #${BUILD_NUMBER}
 <b>Status:</b> SUCCESS
-<b>Staging:</b> http://localhost:3000
-<b>Production:</b> http://localhost:4000"
+<b>Staging:</b> Backend :3000 / Frontend :3001
+<b>Production:</b> Backend :4000 / Frontend :4001"
             '''
         }
         failure {

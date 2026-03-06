@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'node20'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -16,7 +20,7 @@ pipeline {
                         stage('Backend - Install') {
                             steps {
                                 dir('apps/backend') {
-                                    sh 'npm ci'
+                                    sh 'npm install'
                                 }
                             }
                         }
@@ -42,7 +46,7 @@ pipeline {
                         stage('Frontend - Install') {
                             steps {
                                 dir('apps/frontend') {
-                                    sh 'npm ci'
+                                    sh 'npm install'
                                 }
                             }
                         }
@@ -99,15 +103,22 @@ pipeline {
             steps {
                 sh "docker compose -f docker-compose.staging.yml down || true"
                 sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.staging.yml up -d"
-                echo "Staging 배포 완료: Backend http://localhost:3000, Frontend http://localhost:3001"
+                sh '''
+                    sleep 5
+                    curl -f http://backend-staging:3000/health || exit 1
+                    echo "Staging 배포 성공"
+                '''
             }
         }
 
         // Manual Approval
-        stage('Production 배포 승인') {
+        stage('Approval') {
+            options {
+                timeout(time: 30, unit: 'MINUTES')
+            }
             steps {
-                input message: 'Production에 배포하시겠습니까?',
-                      ok: '배포',
+                input message: 'Staging 확인 완료. Production에 배포하시겠습니까?',
+                      ok: '배포 승인',
                       submitter: 'admin'
             }
         }
@@ -117,7 +128,11 @@ pipeline {
             steps {
                 sh "docker compose -f docker-compose.prod.yml down || true"
                 sh "BUILD_NUMBER=${BUILD_NUMBER} docker compose -f docker-compose.prod.yml up -d"
-                echo "Production 배포 완료: Backend http://localhost:4000, Frontend http://localhost:4001"
+                sh '''
+                    sleep 5
+                    curl -f http://backend-prod:4000/health || exit 1
+                    echo "Production 배포 성공"
+                '''
             }
         }
     }

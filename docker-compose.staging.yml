@@ -1,22 +1,25 @@
 services:
-  backend:
+  backend-staging:
     image: todo-backend:${BUILD_NUMBER:-latest}
+    container_name: backend-staging
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=staging
     networks:
-      - staging
+      - devcontainer
 
-  frontend:
+  frontend-staging:
     image: todo-frontend:${BUILD_NUMBER:-latest}
+    container_name: frontend-staging
     ports:
       - "3001:80"
     depends_on:
-      - backend
+      - backend-staging
     networks:
-      - staging
+      - devcontainer
 
 networks:
-  staging:
-    driver: bridge
+  devcontainer:
+    name: jenkins-cicd-lab_devcontainer_default
+    external: true
