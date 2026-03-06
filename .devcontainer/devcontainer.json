@@ -7,13 +7,13 @@
     "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
     "ghcr.io/devcontainers/features/node:1": { "version": "20" }
   },
-  "forwardPorts": [8080, 3000, 3001, 4000, 4001],
+  "forwardPorts": [8080],
   "portsAttributes": {
     "8080": { "label": "Jenkins", "onAutoForward": "openBrowser" },
-    "3000": { "label": "Backend (Staging)" },
-    "3001": { "label": "Frontend (Staging)" },
-    "4000": { "label": "Backend (Production)" },
-    "4001": { "label": "Frontend (Production)" }
+    "3000": { "label": "Backend (Staging)", "onAutoForward": "notify" },
+    "3001": { "label": "Frontend (Staging)", "onAutoForward": "notify" },
+    "4000": { "label": "Backend (Production)", "onAutoForward": "notify" },
+    "4001": { "label": "Frontend (Production)", "onAutoForward": "notify" }
   },
   "remoteEnv": {
     "DOCKER_API_VERSION": "1.43"
