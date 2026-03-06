@@ -1,0 +1,23 @@
+{
+  "name": "Jenkins CI/CD Lab",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "workspace",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "forwardPorts": [8080, 3000, 3001, 4000, 4001],
+  "portsAttributes": {
+    "8080": { "label": "Jenkins", "onAutoForward": "openBrowser" },
+    "3000": { "label": "Backend (Staging)" },
+    "3001": { "label": "Frontend (Staging)" },
+    "4000": { "label": "Backend (Production)" },
+    "4001": { "label": "Frontend (Production)" }
+  },
+  "postStartCommand": "echo '✅ Jenkins: http://localhost:8080' && echo '🔑 초기 비밀번호:' && timeout 60 bash -c 'until docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword 2>/dev/null; do sleep 2; done'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ivory-lab.jenkinsfile-runner-vscode"
+      ]
+    }
+  }
+}
