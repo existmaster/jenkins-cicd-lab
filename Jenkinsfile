@@ -1,11 +1,21 @@
-// LO4 완성: Backend CI 파이프라인
-// Jenkinsfile을 이 내용으로 교체합니다
+// LO7 완성: 통합 Jenkinsfile (CI + Docker Build)
+// Backend CI, Frontend CI, Docker Build를 하나의 Jenkinsfile로 통합합니다
 
 pipeline {
     agent any
 
     tools {
         nodejs 'node20'
+    }
+
+    environment {
+        CI = 'true'
+        NODE_ENV = 'test'
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        disableConcurrentBuilds()
     }
 
     stages {
@@ -15,36 +25,72 @@ pipeline {
             }
         }
 
-        stage('Install') {
-            steps {
-                dir('apps/backend') {
-                    sh 'npm install'
+        stage('Backend CI') {
+            stages {
+                stage('Backend Install') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm install'
+                        }
+                    }
                 }
-            }
-        }
-
-        stage('Lint') {
-            steps {
-                dir('apps/backend') {
-                    sh 'npm run lint'
+                stage('Backend Lint') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm run lint'
+                        }
+                    }
                 }
-            }
-        }
-
-        stage('Test') {
-            steps {
-                dir('apps/backend') {
-                    sh 'npm test'
-                }
-            }
-            post {
-                always {
-                    dir('apps/backend') {
-                        junit 'test-results.xml'
+                stage('Backend Test') {
+                    steps {
+                        dir('apps/backend') {
+                            sh 'npm test'
+                        }
                     }
                 }
             }
         }
+
+        stage('Frontend CI') {
+            stages {
+                stage('Frontend Install') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm install'
+                        }
+                    }
+                }
+                stage('Frontend Lint') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm run lint'
+                        }
+                    }
+                }
+                stage('Frontend Build') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm run build'
+                        }
+                    }
+                }
+                stage('Frontend Test') {
+                    steps {
+                        dir('apps/frontend') {
+                            sh 'npm test'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                sh '''
+                    docker build -t backend:${BUILD_NUMBER} apps/backend/
+                    docker build -t frontend:${BUILD_NUMBER} apps/frontend/
+                '''
+            }
+        }
     }
 }
-
