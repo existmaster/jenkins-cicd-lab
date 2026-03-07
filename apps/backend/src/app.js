@@ -13,7 +13,7 @@ app.get('/api/health', (req, res) => {
 })
 
 app.get('/api/todos', (req, res) => {
-  res.json(todos)
+  res.json({ error: 'broken'})
 })
 
 app.post('/api/todos', (req, res) => {
