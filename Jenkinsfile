@@ -92,5 +92,20 @@ pipeline {
                 '''
             }
         }
+        
+        stage('Deploy Staging') {
+            steps {
+                sh '''
+                    export BUILD_NUMBER=${BUILD_NUMBER}
+                    docker compose -f docker-compose.staging.yml down || true
+                    docker compose -f docker-compose.staging.yml up -d
+                '''
+                sh '''
+                    sleep 5
+                    curl -f http://backend-staging:3000/api/health || exit 1
+                    echo "Staging 배포 성공"
+                '''
+            }
+        }
     }
 }
